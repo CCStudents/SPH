@@ -6,7 +6,7 @@ CFLAGS += -O3 -funroll-loops -ffast-math -march=native
 # ライブラリリンク
 LIBS = -lm
 
-# main() の中でマクロ定義した #define はここで指定するようにしても良い
+# main.c の中でマクロ定義した #define はここで指定するようにしても良い
 # ただしどちらか片方のみ
 # The number of particles
 # MACROS  = -DN_PTCL=1024
@@ -23,9 +23,10 @@ LIBS = -lm
 SOURCE  = main.c
 PROGRAM = search.out
 
+.PHONY: clean $(PROGRAM)
+	
 $(PROGRAM):
 	$(CC) $(SOURCE) $(CFLAGS) $(MACROS) $(LIBS) -o $(PROGRAM)
 
-.PHONY: clean
 clean:
 	rm -f *.out *.log

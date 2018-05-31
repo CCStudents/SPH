@@ -6,15 +6,16 @@
 #include <math.h>
 // ############################################################
 // マクロ定義　この文字列は後ろの数字で置き換えられる　型は自動で指定される
-#define N_PTCL   1024 // 全粒子数
-#define DIM      3    // 次元数
-#define M_SPHERE 1.0  // 一様球の質量
-#define R_SPHERE 1.0  // 一様球の半径
-#define r_VIRIAL 0.5  // ビリアル比
+#define N_PTCL    1024 // 全粒子数
+#define DIM       3    // 次元数
+#define M_SPHERE  1.0  // 一様球の質量
+#define R_SPHERE  1.0  // 一様球の半径
+#define r_VIRIAL  0.5  // ビリアル比
 // ############################################################
 // 関数定義　
 // このプログラムのように main() の後に具体的な内容を書く場合もあるが、
 // 基本的にはヘッダーファイルにまとめてしまえば良い
+void gaussian   ( void );
 void makeSphere ( double m[], double x[][DIM], double v[][DIM] );
 void printData  ( double m[], double x[][DIM], double v[][DIM] );
 // ############################################################
