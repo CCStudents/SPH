@@ -15,7 +15,7 @@
 // 関数定義　
 // このプログラムのように main() の後に具体的な内容を書く場合もあるが、
 // 基本的にはヘッダーファイルにまとめてしまえば良い
-void gaussian   ( void );
+double gaussian   ( void );
 void makeSphere ( double m[], double x[][DIM], double v[][DIM] );
 void printData  ( double m[], double x[][DIM], double v[][DIM] );
 // ############################################################
