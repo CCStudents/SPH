@@ -18,6 +18,9 @@
 double gaussian   ( void );
 void makeSphere ( double m[], double x[][DIM], double v[][DIM] );
 void printData  ( double m[], double x[][DIM], double v[][DIM] );
+
+void neighborsearch ( double x[][DIM] );
+
 // ############################################################
 // メイン関数の中身が実行ファイルで実行される
 int main ( void ) // int型の返り値を持つ void mainでも良い
@@ -32,12 +35,18 @@ int main ( void ) // int型の返り値を持つ void mainでも良い
   // *************************************
   // 課題： ここで各粒子の近くにある粒子を探査すること
   // *************************************
-
+  //近くにある粒子の出力
+  neighborsearch( pos );
 
   // 粒子データの出力
-  printData(mass, pos, vel);
+  //printData(mass, pos, vel);
   return 0; // int の返り値として 0 を return する
+
 }
+
+
+
+
 // ############################################################
 // 関数の具体的な内容記述
 double gaussian ( void )
@@ -51,6 +60,8 @@ double gaussian ( void )
   // ガウシアンに従う確率分布で[0:1]の値を返す
   return sqrt(-2.0 * log(r2) / r2) * x;
 }
+
+
 void makeSphere ( double m[], double x[][DIM], double v[][DIM] )
 {
   // C言語では変数の初期化を意識する
@@ -101,6 +112,8 @@ void makeSphere ( double m[], double x[][DIM], double v[][DIM] )
     v[i][2] = vSigma * gaussian();
   }
 }
+
+
 void printData  ( double m[], double x[][DIM], double v[][DIM] )
 {
   // 粒子データの出力
@@ -109,4 +122,29 @@ void printData  ( double m[], double x[][DIM], double v[][DIM] )
     printf("%lf, %lf, %lf, %lf, %lf, %lf, %lf\n",
             m[i], x[i][0], x[i][1], x[i][2], v[i][0], v[i][1], v[i][2]);
   }
+}
+
+
+void neighborsearch ( double x[][DIM] )
+{
+  // 影響半径の設定
+  double h = 0.0001;
+  // 相対距離
+  double dr[DIM];
+  int i = 0, j=0;
+  for(i=0; i< N_PTCL; i++){
+    for(j=0; j<N_PTCL; j++){
+      if(i!=j){
+        dr[0] = x[j][0] - x[i][0];
+        dr[1] = x[j][1] - x[i][1];
+        dr[2] = x[j][2] - x[i][2];
+        
+        if((dr[0] > -1*h && dr[0] < h )||(dr[1] > -1*h && dr[1] <h) ||(dr[2] >-1*h &&dr[2] <h)){ 
+          printf("%d-particle is close to %d-particle\n", i , j);
+        }
+      }
+    }
+
+  }
+
 }
