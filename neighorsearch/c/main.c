@@ -1,4 +1,4 @@
-// 練習問題　その１　一様球の近傍粒子探査(C base)
+// 練習問題　その２　重心と密度分布(C base)
 // ############################################################
 // ライブラリ（Python の import from ... と似た作業）
 #include <stdio.h>
@@ -6,11 +6,13 @@
 #include <math.h>
 // ############################################################
 // マクロ定義　この文字列は後ろの数字で置き換えられる　型は自動で指定される
-#define N_PTCL    1024 // 全粒子数
-#define DIM       3    // 次元数
-#define M_SPHERE  1.0  // 一様球の質量
-#define R_SPHERE  1.0  // 一様球の半径
-#define r_VIRIAL  0.5  // ビリアル比
+#define N_PTCL    1024    // 全粒子数
+#define DIM       3       // 次元数
+#define M_SPHERE  1.0     // 一様球の質量
+#define R_SPHERE  1.0     // 一様球の半径
+#define r_VIRIAL  0.5     // ビリアル比
+#define H         0.1  // smoothing length
+#define H2        (H * H) // squared smoothing length
 // ############################################################
 // 関数定義　
 // このプログラムのように main() の後に具体的な内容を書く場合もあるが、
@@ -18,6 +20,7 @@
 double gaussian   ( void );
 void makeSphere ( double m[], double x[][DIM], double v[][DIM] );
 void printData  ( double m[], double x[][DIM], double v[][DIM] );
+void serchNeighbor ( double x[][DIM]);
 // ############################################################
 // メイン関数の中身が実行ファイルで実行される
 int main ( void ) // int型の返り値を持つ void mainでも良い
@@ -30,9 +33,17 @@ int main ( void ) // int型の返り値を持つ void mainでも良い
   makeSphere(mass, pos, vel);
 
   // *************************************
-  // 課題： ここで各粒子の近くにある粒子を探査すること
+  // 課題１： ここで各粒子の近くにある粒子を探査すること
+  // *************************************
+  serchNeighbor(pos);
+  // *************************************
+  // 課題２： 重心をもとめること
   // *************************************
 
+  // *************************************
+  // 課題２： 半径方向の密度分布を計算すること
+  //       半径を bin で区切ると良い
+  // *************************************
 
   // 粒子データの出力
   printData(mass, pos, vel);
@@ -99,6 +110,25 @@ void makeSphere ( double m[], double x[][DIM], double v[][DIM] )
     v[i][0] = vSigma * gaussian();
     v[i][1] = vSigma * gaussian();
     v[i][2] = vSigma * gaussian();
+  }
+}
+void serchNeighbor ( double x[][DIM] )
+{
+  // 課題１の模範解答
+  int i, j;
+  double dx[DIM]; // 相対距離ベクトル
+  double dr2;     // 相対距離の半径の２乗
+  for(i = 0; i < N_PTCL - 1; i++){
+    for(j = i + 1; j < N_PTCL; j++){
+      // (i, j)粒子の相対距離の計算
+      dx[0] = x[j][0] - x[i][0];
+      dx[1] = x[j][1] - x[i][1];
+      dx[2] = x[j][2] - x[i][2];
+      // 半径の２乗の計算
+      dr2 = dx[0] * dx[0] + dx[1] * dx[1] + dx[2] * dx[2];
+      if(dr2 < H2) // Smoothing length との距離の大小判定
+        printf("No.%d is neighbor particle with No.%d.\n", i, j);
+    }
   }
 }
 void printData  ( double m[], double x[][DIM], double v[][DIM] )
