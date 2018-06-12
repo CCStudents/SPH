@@ -1,5 +1,6 @@
+#!/bin/bash
 # プログラムのコンパイルとデータ作成を行う shell script
-# ** $ bash test.sh で実行できる
+# ** $ ./test.sh で実行できる
 make clean
 make
 # 標準出力をdata.ptclに上書き保存する
