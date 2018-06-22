@@ -1,4 +1,4 @@
-// 練習問題　その１　一様球の近傍粒子探査(C base)
+// 練習問題　その２　重心と密度分布(C base)
 // ############################################################
 // ライブラリ（Python の import from ... と似た作業）
 #include <stdio.h>
@@ -11,6 +11,8 @@
 #define M_SPHERE  1.0  // 一様球の質量
 #define R_SPHERE  1.0  // 一様球の半径
 #define r_VIRIAL  0.5  // ビリアル比
+#define H         0.1  // smoothing length
+#define H2        (H * H) // squared smoothing length
 // ############################################################
 // 関数定義　
 // このプログラムのように main() の後に具体的な内容を書く場合もあるが、
@@ -18,9 +20,8 @@
 double gaussian   ( void );
 void makeSphere ( double m[], double x[][DIM], double v[][DIM] );
 void printData  ( double m[], double x[][DIM], double v[][DIM] );
-
-void neighborsearch ( double x[][DIM] );
-
+void serchNeighbor ( double x[][DIM]);
+double gravityCenter  ( double m[], double x[][DIM] );
 // ############################################################
 // メイン関数の中身が実行ファイルで実行される
 int main ( void ) // int型の返り値を持つ void mainでも良い
@@ -33,13 +34,20 @@ int main ( void ) // int型の返り値を持つ void mainでも良い
   makeSphere(mass, pos, vel);
 
   // *************************************
-  // 課題： ここで各粒子の近くにある粒子を探査すること
+  // 課題１： ここで各粒子の近くにある粒子を探査すること
   // *************************************
-  //近くにある粒子の出力
-  neighborsearch( pos );
+  serchNeighbor(pos);
+  // *************************************
+  // 課題２： 重心をもとめること
+  // *************************************
+
+  // *************************************
+  // 課題２： 半径方向の密度分布を計算すること
+  //       半径を bin で区切ると良い
+  // *************************************
 
   // 粒子データの出力
-  //printData(mass, pos, vel);
+  printData(mass, pos, vel);
   return 0; // int の返り値として 0 を return する
 
 }
@@ -124,27 +132,31 @@ void printData  ( double m[], double x[][DIM], double v[][DIM] )
   }
 }
 
-
-void neighborsearch ( double x[][DIM] )
+void serchNeighbor ( double x[][DIM] )
 {
-  // 影響半径の設定
-  double h = 0.0001;
-  // 相対距離
-  double dr[DIM];
-  int i = 0, j=0;
-  for(i=0; i< N_PTCL; i++){
-    for(j=0; j<N_PTCL; j++){
-      if(i!=j){
-        dr[0] = x[j][0] - x[i][0];
-        dr[1] = x[j][1] - x[i][1];
-        dr[2] = x[j][2] - x[i][2];
-        
-        if((dr[0] > -1*h && dr[0] < h )||(dr[1] > -1*h && dr[1] <h) ||(dr[2] >-1*h &&dr[2] <h)){ 
-          printf("%d-particle is close to %d-particle\n", i , j);
-        }
-      }
+  // 課題１の模範解答
+  int i, j;
+  double dx[DIM]; // 相対距離ベクトル
+  double dr2;     // 相対距離の半径の２乗
+  for(i = 0; i < N_PTCL - 1; i++){
+    for(j = i + 1; j < N_PTCL; j++){
+      // (i, j)粒子の相対距離の計算
+      dx[0] = x[j][0] - x[i][0];
+      dx[1] = x[j][1] - x[i][1];
+      dx[2] = x[j][2] - x[i][2];
+      // 半径の２乗の計算
+      dr2 = dx[0] * dx[0] + dx[1] * dx[1] + dx[2] * dx[2];
+      if(dr2 < H2) // Smoothing length との距離の大小判定
+        printf("No.%d is neighbor particle with No.%d.\n", i, j);
     }
+  }
+}
+
+double gravityCenter ( double m[], double x[][DIM] )
+{
+  int i, j;
+  double
+  for(i = 0; i < N_PTCL - 1; i++){
 
   }
-
 }

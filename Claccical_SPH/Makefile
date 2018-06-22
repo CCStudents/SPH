@@ -21,12 +21,12 @@ LIBS = -lm
 
 # ソースファイル（main.c）と実行ファイル名の指定
 SOURCE  = main.c
-PROGRAM = search.out
+PROGRAM = sph.out
 
 .PHONY: clean $(PROGRAM)
 
 $(PROGRAM):
 	$(CC) $(SOURCE) $(CFLAGS) $(MACROS) $(LIBS) -o $(PROGRAM)
 
-clean:
-	rm -f *.out *.log
+clear:
+	rm -f *.ptcl *.out *.gif
