@@ -3,6 +3,7 @@
 # ** $ bash test.sh で実行できる
 
 #make clear
+rm data/*
 make
 
 ./sph.out
