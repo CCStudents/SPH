@@ -2,7 +2,7 @@
 # プログラムのコンパイルとデータ作成を行う shell script
 # ** $ bash test.sh で実行できる
 
-#make clear
+#make clean
 rm data/*
 make
 

@@ -8,7 +8,7 @@
 #define N_ALL   N_PTCL + N_Satb_PTCL
 #define Gamma   1.4         //比熱比
 //#define dt      0.0002      //時間ステップ
-#define StepN   200         //ステップ数
+#define StepN   150         //ステップ数
 #define Rho1    1.0         //初期密度1
 #define Rho2    0.25        //初期密度2
 #define Vel     0.0         //初期速度
@@ -23,10 +23,10 @@ double KernelFunc  ( int i,int j, double x[], double h[] );
 double DifferKernelFunc  ( int i,int j, double x[], double h[] );
 double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double u[], double h[]);
 double Smoothing_Length ( int i, double x[]);
-double TimeStep      ( double x[], double v[], double p[], double d[],double h[]);
+double Time_Step   ( double x[], double v[], double p[], double d[],double h[]);
 
 void InicialCondi  ( double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] );
-void RungeKutta    ( double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] );
+void RungeKutta    ( double dt, double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] );
 void PrintData     ( FILE *file, double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] );
 
 //double用比較関数
@@ -41,7 +41,7 @@ int main (void)
   //質量、位置、速度、加速度、圧力、密度、内部エネルギー、内部エネルギーの時間変化、影響半径
   static double mass[N_ALL], pos[N_ALL], vel[N_ALL], acc[N_ALL], press[N_ALL],
                 dens[N_ALL], energy[N_ALL], difenergy[N_ALL], len[N_ALL];
-
+  double timestep, totaltime = 0.0;
   ///*
   FILE *fp;
   int i = 0;
@@ -58,8 +58,20 @@ int main (void)
       InicialCondi(mass, pos, vel, acc, press, dens, energy, difenergy, len);
       PrintData(fp, mass, pos, vel, acc, press, dens, energy, difenergy, len);
     }else{
-      RungeKutta(mass, pos, vel, acc, press, dens, energy, difenergy, len);
+      //timestepの計算
+      timestep = Time_Step(pos, vel, press, dens, len);
+      totaltime = totaltime + timestep;
+      if (totaltime > 0.25){
+        timestep = totaltime - 0.25;
+        RungeKutta(timestep, mass, pos, vel, acc, press, dens, energy, difenergy, len);
+        PrintData(fp, mass, pos, vel, acc, press, dens, energy, difenergy, len);
+        printf("%f\n",timestep);
+        fclose(fp);
+        exit(0);
+      }
+      RungeKutta(timestep, mass, pos, vel, acc, press, dens, energy, difenergy, len);
       PrintData(fp, mass, pos, vel, acc, press, dens, energy, difenergy, len);
+      printf("%f, %f\n",timestep,totaltime);
     }
     fclose(fp);
   }
@@ -130,7 +142,7 @@ double Smoothing_Length ( int i, double x[] )
 
 
 //最も小さいdtの計算
-double TimeStep ( double x[], double v[], double p[], double d[],double h[])
+double Time_Step ( double x[], double v[], double p[], double d[],double h[])
 {
   double t[N_PTCL], mu[N_PTCL];
   int i = 0, j = 0;
@@ -220,13 +232,10 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
   }
 }
 
-void RungeKutta ( double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] )
+void RungeKutta ( double dt, double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] )
 {
   double vp[N_ALL], up[N_ALL], a1[N_ALL], du1[N_ALL];
   int i = 0, j = 0, k = 0, l = 0, n = 0, o = 0, q = 0;
-
-  //timestepの計算
-  double dt = TimeStep(x, v, p, d, h);
 
   for(i=0; i < N_PTCL; i++){
     //ステップ後の位置を計算 系内の粒子のみ
