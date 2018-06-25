@@ -2,18 +2,18 @@
 #include<stdlib.h>
 #include<math.h>
 
-#define N_PTCL        400       //系内の全粒粒子数
+#define N_PTCL        500       //系内の全粒粒子数
 #define N_Satb_PTCL   50        //考えている系の前後にそれぞれ配置する粒子数
-#define Neighbor_PTCL 3        //近傍粒子数
+#define Neighbor_PTCL 4        //近傍粒子数
 #define N_ALL   N_PTCL + N_Satb_PTCL
 #define Gamma   1.4         //比熱比
-//#define dt      0.0002      //時間ステップ
-#define StepN   150         //ステップ数
+#define StepN   2000        //ステップ数
 #define Rho1    1.0         //初期密度1
-#define Rho2    0.25        //初期密度2
-#define Vel     0.0         //初期速度
-#define Press1  1.0         //初期圧力1
-#define Press2  0.1795      //初期圧力2
+#define Rho2    1.0        //初期密度2
+#define Vel1    -2.0         //初期速度1
+#define Vel2    2.0         //初期速度2
+#define Press1  0.4           //初期圧力1
+#define Press2  0.4    //初期圧力2
 #define Alpha   1.0         //粘性項のα
 #define Beta    2.0         //粘性項のβ
 #define Epsilon 0.01        //粘性項のε
@@ -71,28 +71,10 @@ int main (void)
       }
       RungeKutta(timestep, mass, pos, vel, acc, press, dens, energy, difenergy, len);
       PrintData(fp, mass, pos, vel, acc, press, dens, energy, difenergy, len);
-      printf("%f, %f\n",timestep,totaltime);
+      printf("%f\n",totaltime);
     }
     fclose(fp);
   }
-//  */
-/*
-//以下確認用
-  InicialCondi(mass, pos, vel, acc, press, dens, energy, difenergy, len);
-  int i=0 ,j = 0;
-  for (i = 0; i < N_PTCL ; i++){
-    printf("%f,%f ,%f \n" ,pos[i], len[i], Smoothing_Length(i,pos,len));
-  }
-
-  for (j = 0; j < 20 ; j++){
-    printf("j = %d \n", j);
-    RungeKutta(mass, pos, vel, acc, press, dens, energy, difenergy, len);
-    for (i = 0; i < N_PTCL ; i++){
-      printf("%f,%f ,%f \n" ,pos[i], len[i], Smoothing_Length(i,pos,len));
-    }
-  }
- */
-
   return 0;
 }
 
@@ -157,7 +139,7 @@ double Time_Step ( double x[], double v[], double p[], double d[],double h[])
     }
     t[i] = h[i] / ( c + 0.6 * (Alpha * c + Beta * MaxArray(mu, (int) sizeof(mu) / sizeof(mu[0])) ));
   }
-  return  0.25 * MinArray(t, (int) sizeof(t) / sizeof(t[0]));
+  return  MinArray(t, (int) sizeof(t) / sizeof(t[0])) * 0.75;
 }
 
 
@@ -169,7 +151,6 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
   double N2 = N_PTCL * Rho2 / (Rho1 + Rho2);
   for(i = 0; i < N_ALL; i++){
     m[i] = (Rho1 + Rho2) / 2 / N_PTCL;
-    v[i] = Vel;
     //密度を1と0.25にするために位置を調節
     //ifの中は0-0.5の範囲（粒子数多め）
     if( i <= N1 ){
@@ -180,13 +161,13 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
       }
       p[i] = Press1;
       d[i] = Rho1;
-
+      v[i] = Vel1;
       //h[i] = 2*m[i] / Rho1;
     }else if ( N1 < i && i <= N_PTCL + N_Satb_PTCL / 2 ){
       x[i] = x[i-1] + 0.5 / N2;
       p[i] = Press2;
       d[i] = Rho2;
-
+      v[i] = Vel2;
       //h[i] = 2*m[i] / Rho2;
     }else{
       if ( i == N_PTCL + N_Satb_PTCL / 2 + 1 ){
@@ -196,7 +177,7 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
       }
       p[i] = Press1;
       d[i] = Rho1;
-
+      v[i] = Vel1;
       //h[i] = 2* m[i] / Rho1;
     }
     //初期化
@@ -267,7 +248,7 @@ void RungeKutta ( double dt, double m[], double x[], double v[], double a[], dou
       a1[i] = a1[i] + (-1) * m[j] * (p[i] / d[i] / d[i] + p[j] / d[j] / d[j] ) * DifferKernelFunc(i, j, x, h)
               -1 * m[j] * ViscosityTerm(i, j, x, vp, d, up ,h) * DifferKernelFunc(i, j, x, h) ;
       du1[i] = du1[i] + (p[i] / d[i] / d[i] ) * m[j] * (vp[i] - vp[j] ) * DifferKernelFunc(i, j, x, h)
-              -1 * m[j] * ViscosityTerm(i, j, x, vp, d, up, h) * (vp[i] - vp[j] ) * DifferKernelFunc(i, j, x, h) ;
+              +1 * m[j] * ViscosityTerm(i, j, x, vp, d, up, h) * (vp[i] - vp[j] ) * DifferKernelFunc(i, j, x, h) / 2;
     }
   }
   //ステップ後の速度と内部エネルギーの計算 系内の粒子のみ
@@ -318,8 +299,8 @@ double MinArray( double n[], int l )
   int i = 0;
   double min;
   min = n[0];
-  for(i = 0; i< l; i++){
-    if(min < n[i]) min = n[i];
+  for(i = 0; i> l; i++){
+    if(min > n[i]) min = n[i];
   }
   return min;
 }
