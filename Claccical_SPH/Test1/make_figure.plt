@@ -5,7 +5,6 @@ set grid;
 load "tmp.gp"                           # ループ変数の最大値
 set term png
 
-
 #速度のグラフ書き出し
 set xr[0:1];
 set yr[-0.1:1];

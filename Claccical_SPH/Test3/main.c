@@ -14,9 +14,10 @@
 #define Vel2    0         //初期速度2
 #define Press1  1000         //初期圧力1
 #define Press2  0.01      //初期圧力2
-#define Alpha   2.0         //粘性項のα
-#define Beta    4.0         //粘性項のβ
+#define Alpha   1.5         //粘性項のα
+#define Beta    2.0 * Alpha         //粘性項のβ
 #define Epsilon 0.01        //粘性項のε
+#define EndTime 0.012      //終了時刻
 
 
 double KernelFunc  ( int i,int j, double x[], double h[] );
@@ -61,8 +62,8 @@ int main (void)
       //timestepの計算
       timestep = Time_Step(pos, vel, press, dens, len);
       totaltime = totaltime + timestep;
-      if (totaltime > 0.012){
-        timestep = totaltime - 0.012;
+      if (totaltime > EndTime){
+        timestep = totaltime - EndTime;
         RungeKutta(timestep, mass, pos, vel, acc, press, dens, energy, difenergy, len);
         PrintData(fp, mass, pos, vel, acc, press, dens, energy, difenergy, len);
         printf("%f\n",timestep);
@@ -194,9 +195,6 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
       d[i] = d[i] + m[j] * KernelFunc(i, j, x, h);
     }
   }
-
-
-
   //内部エネルギーの初期値
   for(i = 0; i < N_ALL; i++){
     u[i] = p[i] / (Gamma -1) / d[i];
@@ -220,10 +218,6 @@ void RungeKutta ( double dt, double m[], double x[], double v[], double a[], dou
   for(i=0; i < N_PTCL; i++){
     //ステップ後の位置を計算 系内の粒子のみ
     x[i] = x[i] + v[i] * dt + a[i] * dt *dt / 2;    //ステップ後の位置はこの値となる
-    //境界に行った場合、速度を逆向きにする
-    if( x[i] < 0 || x[i] > 1){
-      v[i] = -1 * v[i];
-    }
   }
 
   for( i = 0; i < N_ALL; i++){

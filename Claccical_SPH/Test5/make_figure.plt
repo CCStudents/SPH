@@ -7,7 +7,7 @@ set term png
 
 
 #速度のグラフ書き出し
-set xr[-0.5:1.5];
+set xr[0.6:0.9];
 set yr[-12.5:25];
 set output sprintf("data_%d_velocity.png" , n1-1)
 set title "velocity"
@@ -16,7 +16,7 @@ filename = sprintf("data_%d.ptcl", n1-1)     # n番目のデータファイル�
 plot filename using 2:3 with points pt 7 # 1:質量 2:位置 3:速度 4:加速度 5:圧力 6:密度 7:内部エネルギー 8:内部エネルギー時間微分 9:smoothing length
 
 #密度のグラフ書き出し
-set xr[-0.5:1.5];
+set xr[0.6:0.9];
 set yr[0:40];
 set output sprintf("data_%d_density.png" , n1-1)
 set title "density"
@@ -25,7 +25,7 @@ filename = sprintf("data_%d.ptcl", n1-1)     # n番目のデータファイル�
 plot filename using 2:6 with points pt 7 # 1:質量 2:位置 3:速度 4:加速度 5:圧力 6:密度 7:内部エネルギー 8:内部エネルギー時間微分 9:smoothing length
 
 #圧力のグラフ書き出し
-set xr[-0.5:1.5];
+set xr[0.6:0.9];
 set yr[0:2000];
 set output sprintf("data_%d_pressure.png" , n1-1)
 set title "pressure"
@@ -34,7 +34,7 @@ filename = sprintf("data_%d.ptcl", n1-1)     # n番目のデータファイル�
 plot filename using 2:5 with points pt 7 # 1:質量 2:位置 3:速度 4:加速度 5:圧力 6:密度 7:内部エネルギー 8:内部エネルギー時間微分 9:smoothing length
 
 #内部エネルギーのグラフ書き出し
-set xr[-0.5:1.5];
+set xr[0.6:0.9];
 set yr[0:400];
 set output sprintf("data_%d_energy.png" , n1-1)
 set title "energy"

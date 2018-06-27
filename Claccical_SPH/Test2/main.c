@@ -7,7 +7,7 @@
 #define Neighbor_PTCL 4        //近傍粒子数
 #define N_ALL   N_PTCL + N_Satb_PTCL
 #define Gamma   1.4         //比熱比
-#define StepN   6000        //ステップ数
+#define StepN   500        //ステップ数
 #define Rho1    1.0         //初期密度1
 #define Rho2    1.0        //初期密度2
 #define Vel1    -2.0         //初期速度1
@@ -17,6 +17,7 @@
 #define Alpha   1.0         //粘性項のα
 #define Beta    2.0         //粘性項のβ
 #define Epsilon 0.01        //粘性項のε
+#define EndTime 0.15      //終了時刻
 
 
 double KernelFunc  ( int i,int j, double x[], double h[] );
@@ -61,8 +62,8 @@ int main (void)
       //timestepの計算
       timestep = Time_Step(pos, vel, press, dens, len);
       totaltime = totaltime + timestep;
-      if (totaltime > 0.25){
-        timestep = totaltime - 0.25;
+      if (totaltime > EndTime){
+        timestep = totaltime - EndTime;
         RungeKutta(timestep, mass, pos, vel, acc, press, dens, energy, difenergy, len);
         PrintData(fp, mass, pos, vel, acc, press, dens, energy, difenergy, len);
         printf("%f\n",timestep);
@@ -195,9 +196,6 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
       d[i] = d[i] + m[j] * KernelFunc(i, j, x, h);
     }
   }
-
-
-
   //内部エネルギーの初期値
   for(i = 0; i < N_ALL; i++){
     u[i] = p[i] / (Gamma -1) / d[i];
@@ -218,13 +216,9 @@ void RungeKutta ( double dt, double m[], double x[], double v[], double a[], dou
   double vp[N_ALL], up[N_ALL], a1[N_ALL], du1[N_ALL];
   int i = 0, j = 0, k = 0, l = 0, n = 0, o = 0, q = 0;
 
-  for(i=0; i < N_PTCL; i++){
+  for(i=0; i < N_ALL; i++){
     //ステップ後の位置を計算 系内の粒子のみ
     x[i] = x[i] + v[i] * dt + a[i] * dt *dt / 2;    //ステップ後の位置はこの値となる
-    //境界に行った場合、速度を逆向きにする
-    if( x[i] < 0 || x[i] > 1){
-      v[i] = -1 * v[i];
-    }
   }
 
   for( i = 0; i < N_ALL; i++){
