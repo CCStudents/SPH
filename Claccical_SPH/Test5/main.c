@@ -14,11 +14,13 @@
 #define Vel2    -6.19633         //初期速度2
 #define Press1  460.894          //初期圧力1
 #define Press2  46.0950          //初期圧力2
-#define Alpha   1.5              //粘性項のα
+#define Alpha   1.0              //粘性項のα
 #define Beta    2.0 * Alpha      //粘性項のβ
 #define Epsilon 0.01             //粘性項のε
 #define EndTime 0.035            //終了時刻
-
+#define XMax    2.0              //系の大きさ(xの最大値)
+#define XMin    -2.0             //系の大きさ(xの最小値)
+#define DeltaX  (XMax - XMin) / 2  //系の大きさの半分
 
 double KernelFunc  ( int i,int j, double x[], double h[] );
 double DifferKernelFunc  ( int i,int j, double x[], double h[] );
@@ -151,30 +153,30 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
   double N1 = N_PTCL * Rho1 / (Rho1 + Rho2);
   double N2 = N_PTCL * Rho2 / (Rho1 + Rho2);
   for(i = 0; i < N_ALL; i++){
-    m[i] = (Rho1 + Rho2) / 2 / N_PTCL;
+    m[i] = (Rho1 + Rho2) * DeltaX / N_PTCL;
     //密度を1と0.25にするために位置を調節
     //ifの中は0-0.5の範囲（粒子数多め）
     if( i <= N1 ){
       if( i == 0 ){
-        x[i] = 0;
+        x[i] = XMin;
       }else{
-        x[i] = x[i-1] + 0.5 / N1;
+        x[i] = x[i-1] + DeltaX / N1;
       }
       p[i] = Press1;
       d[i] = Rho1;
       v[i] = Vel1;
       //h[i] = 2*m[i] / Rho1;
     }else if ( N1 < i && i <= N_PTCL + N_Satb_PTCL / 2 ){
-      x[i] = x[i-1] + 0.5 / N2;
+      x[i] = x[i-1] + DeltaX / N2;
       p[i] = Press2;
       d[i] = Rho2;
       v[i] = Vel2;
       //h[i] = 2*m[i] / Rho2;
     }else{
       if ( i == N_PTCL + N_Satb_PTCL / 2 + 1 ){
-        x[i] = x[0] - 0.5 / N1;
+        x[i] = x[0] - DeltaX / N1;
       }else{
-        x[i] = x[i-1] - 0.5 / N1;
+        x[i] = x[i-1] - DeltaX / N1;
       }
       p[i] = Press1;
       d[i] = Rho1;
@@ -208,7 +210,7 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
   for(i = 0; i < N_ALL; i++){
     for(j = 0; j < N_ALL; j++){
       a[i] = a[i] + (-1) * m[j] * (p[i] / d[i] / d[i] + p[j] / d[j] / d[j] ) * DifferKernelFunc(i, j, x, h);
-      //エネルギー積分値は初速度0なので初期値0
+      //エネルギー積分値は初速度0のとき初期値0
       du[i]= du[i] + (p[i] / d[i] / d[j] )* m[j] * (v[i] - v[j] ) * DifferKernelFunc(i, j, x, h);
     }
   }

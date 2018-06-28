@@ -8,9 +8,9 @@ make
 
 ./sph.out
 
+mv -f *.ptcl data/
+
 # gnuplot で位置情報を描画　q をコンソールに入力してグラフモード終了
 gnuplot << EOF
   load "gnuplot_sample.gp"
 EOF
-
-mv -f *.ptcl data/
