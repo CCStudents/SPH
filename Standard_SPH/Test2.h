@@ -12,3 +12,4 @@
 #define Alpha   1.5              //粘性項のα
 #define Beta    2.0 * Alpha      //粘性項のβ
 #define Epsilon 0.01             //粘性項のε
+#define Neighbor_PTCL 4          //近傍粒子数

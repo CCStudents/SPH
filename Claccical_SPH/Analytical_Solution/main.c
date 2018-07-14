@@ -1,11 +1,11 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
-#include"Test5.h"
+#include<time.h>
+#include"Test1.h"
 
-#define N_PTCL        800        //系内の全粒粒子数
+#define N_PTCL        500        //系内の全粒粒子数
 #define N_Satb_PTCL   50         //考えている系の前後にそれぞれ配置する粒子数
-#define Neighbor_PTCL 4          //近傍粒子数
 #define N_ALL   N_PTCL + N_Satb_PTCL
 #define Gamma   1.4              //比熱比
 #define StepN   5000             //ステップ数
@@ -15,8 +15,12 @@
 
 double KernelFunc  ( int i,int j, double x[], double h[] );
 double DifferKernelFunc  ( int i,int j, double x[], double h[] );
+double DifferKernelFunc_hj ( int i, int j, double x[], double h[] );
+double Grad_h_term (int i, double m[], double x[], double d, double h[]);
+
+
 double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double u[], double h[]);
-double Smoothing_Length ( int i, double x[]);
+double Smoothing_Length ( int i, double m[], double d[]);
 double Time_Step   ( double x[], double v[], double p[], double d[],double h[]);
 
 void InicialCondi  ( double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] );
@@ -47,6 +51,8 @@ double Compare_Max( double x, double y);
 
 int main (void)
 {
+  clock_t start,end;
+  start = clock();
   //質量、位置、速度、加速度、圧力、密度、内部エネルギー、内部エネルギーの時間変化、影響半径
   static double mass[N_ALL], pos[N_ALL], vel[N_ALL], acc[N_ALL], press[N_ALL],
                 dens[N_ALL], energy[N_ALL], difenergy[N_ALL], len[N_ALL];
@@ -61,18 +67,10 @@ int main (void)
 
   FILE *fp;
   int i = 0;
-  char filename[100];
   for(i = 0; i < StepN; i++){
-    sprintf(filename, "data_%d.ptcl",i);
-    fp = fopen(filename, "w");
-    if( fp == NULL ) {
-      perror("ファイルの読み込みに失敗！\n");
-      return 1;
-    }
 
     if(i==0){
       InicialCondi(mass, pos, vel, acc, press, dens, energy, difenergy, len);
-      PrintData(fp, mass, pos, vel, acc, press, dens, energy, difenergy, len);
     }else{
       //timestepの計算
       timestep = Time_Step(pos, vel, press, dens, len);
@@ -80,22 +78,19 @@ int main (void)
       if (totaltime > EndTime){
         timestep = totaltime - EndTime;
         RungeKutta(timestep, mass, pos, vel, acc, press, dens, energy, difenergy, len);
-        PrintData(fp, mass, pos, vel, acc, press, dens, energy, difenergy, len);
-        fclose(fp);
         //解析解の出力
         fp = fopen("analytical_data.ptcl", "w");
         Analytical_solution(pos, vel_solution, press_solution, dens_solution, energy_solution);
         PrintData(fp, pos, vel, vel_solution, press, press_solution, dens, dens_solution, energy, energy_solution);
         fclose(fp);
+        end = clock();
+        printf("%.2f秒\n",(double)(end-start)/CLOCKS_PER_SEC);
         return 0;
         exit(0);
       }
       RungeKutta(timestep, mass, pos, vel, acc, press, dens, energy, difenergy, len);
-      PrintData(fp, mass, pos, vel, acc, press, dens, energy, difenergy, len);
     }
   }
-  fclose(fp);
-
 }
 
 double Star_Press (void) //Star領域での圧力
@@ -368,6 +363,13 @@ double DifferKernelFunc ( int i, int j, double x[], double h[] )
   dx = x[i] - x[j];
   return -2*dx*exp(-1*dx*dx/h[i]/h[i]) /h[i]/h[i]/h[i]/sqrt(M_PI);
 }
+//カーネル関数の微分∇Wijの定義
+double DifferKernelFunc_hj ( int i, int j, double x[], double h[] )
+{
+  double dx = 0.0;
+  dx = x[i] - x[j];
+  return -2*dx*exp(-1*dx*dx/h[j]/h[j]) /h[j]/h[j]/h[j]/sqrt(M_PI);
+}
 //人工粘性項の定義
 double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double u[], double h[])
 {
@@ -385,15 +387,10 @@ double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double 
   }
 }
 //Smoothing Length の計算　i粒子に対する近傍粒子数に応じて長さを変える
-double Smoothing_Length ( int i, double x[] )
+double Smoothing_Length ( int i, double m[], double d[])
 {
-  int j = 0;
-  double dx[N_ALL];
-  for( j = 0; j < N_ALL; j++){
-    dx[j] = fabs(x[i] - x[j]);
-  }
-  qsort(dx, N_ALL, sizeof(double), asc);
-  return dx[Neighbor_PTCL];
+  printf("%f\n",Neighbor_PTCL * m[i] / d[i] );
+  return Neighbor_PTCL * m[i] / d[i];
 }
 //最も小さいdtの計算
 double Time_Step ( double x[], double v[], double p[], double d[],double h[])
@@ -456,7 +453,7 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
   }
   //smoothing length の計算
   for(i = 0; i < N_ALL; i++){
-    h[i] = Smoothing_Length(i, x);
+    h[i] = Smoothing_Length(i, m, d);
   }
   //現在の粒子位置における密度を計算
   for(i = 0; i < N_PTCL; i++){
@@ -483,12 +480,26 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
   }
 }
 
+double Grad_h_term (int i, double m[], double x[], double d, double h[])
+{
+  double dens_h = 0;
+  double dx = 0.0;
+  int j = 0;
+  for (j = 0; j < N_ALL; j++){
+    dx = x[i]-x[j];
+    dens_h =dens_h + 2*m[j]*dx*dx*KernelFunc(i,j,x,h);
+  }
+  return h[i]*h[i]*d/dens_h;
+}
+
+
 
 void RungeKutta ( double dt, double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] )
 {
   double vp[N_ALL], up[N_ALL], a1[N_ALL], du1[N_ALL];
   int i = 0, j = 0, k = 0, l = 0, n = 0, o = 0, q = 0;
-
+  double difker_i = 0 , difker_j = 0, difker_ij = 0,vis = 0;
+  double fi = 0, fj =0;
   for(i=0; i < N_ALL; i++){
     //ステップ後の位置を計算 系内の粒子のみ
     x[i] = x[i] + v[i] * dt + a[i] * dt *dt / 2;    //ステップ後の位置はこの値となる
@@ -511,11 +522,17 @@ void RungeKutta ( double dt, double m[], double x[], double v[], double a[], dou
   for(i = 0; i < N_PTCL; i++){
     a1[i] = 0;
     du1[i] = 0;
+    fi = Grad_h_term(i, m, x, d[i], h);
     for(j = 0; j < N_ALL; j++){
-      a1[i] = a1[i] + (-1) * m[j] * (p[i] / d[i] / d[i] + p[j] / d[j] / d[j] ) * DifferKernelFunc(i, j, x, h)
-              -1 * m[j] * ViscosityTerm(i, j, x, vp, d, up ,h) * DifferKernelFunc(i, j, x, h) ;
-      du1[i] = du1[i] + (p[i] / d[i] / d[i] ) * m[j] * (vp[i] - vp[j] ) * DifferKernelFunc(i, j, x, h)
-              +1 * m[j] * ViscosityTerm(i, j, x, vp, d, up, h) * (vp[i] - vp[j] ) * DifferKernelFunc(i, j, x, h) / 2 ;
+      difker_i =  DifferKernelFunc(i, j, x, h);
+      difker_j =  DifferKernelFunc_hj(i, j, x, h);
+      difker_ij = (difker_i+difker_j)/2;
+      vis = ViscosityTerm(i, j, x, vp, d, up ,h);
+      fj = Grad_h_term(j, m, x, d[j], h);
+      a1[i] = a1[i] + (-1) * m[j] * (fi * p[i] / d[i] / d[i]  *difker_i + fj * p[j] / d[j] / d[j]  *difker_j)
+              -1 * m[j] * vis * difker_ij;
+      du1[i] = du1[i] + fi * (p[i] / d[i] / d[i] ) * m[j] * (vp[i] - vp[j] ) * difker_i
+              +1 * m[j] * vis * (vp[i] - vp[j] ) * difker_ij / 2 ;
     }
   }
   //ステップ後の速度と内部エネルギーの計算 系内の粒子のみ
@@ -527,7 +544,7 @@ void RungeKutta ( double dt, double m[], double x[], double v[], double a[], dou
   for(i = 0; i < N_PTCL; i++){
     a[i] = a1[i];
     du[i] = du1[i];
-    h[i] = Smoothing_Length(i, x);
+    h[i] = Smoothing_Length(i, m, d);
   }
 }
 void PrintData    (FILE *file, double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] )
