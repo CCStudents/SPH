@@ -2,16 +2,16 @@
 #include<stdlib.h>
 #include<math.h>
 #include<time.h>
-#include"Test1.h"
+#include"Test3.h"
 
 #define N_PTCL        500        //系内の全粒粒子数
-#define N_Satb_PTCL   50         //考えている系の前後にそれぞれ配置する粒子数
+#define N_Satb_PTCL   200         //考えている系の前後にそれぞれ配置する粒子数
 #define N_ALL   N_PTCL + N_Satb_PTCL
 #define Gamma   1.4              //比熱比
 #define StepN   5000             //ステップ数
 #define TOL     0.000001          //p_starの収束条件
 
-
+void Current_time();
 
 double KernelFunc  ( int i,int j, double x[], double h[] );
 double DifferKernelFunc  ( int i,int j, double x[], double h[] );
@@ -20,8 +20,8 @@ double Grad_h_term (int i, double m[], double x[], double d, double h[]);
 
 
 double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double u[], double h[]);
-double Smoothing_Length ( int i, double m[], double d[]);
-double Time_Step   ( double x[], double v[], double p[], double d[],double h[]);
+double Smoothing_Length ( int i, double m[], double x[],double d[]);
+double Time_Step   ( double x[], double v[], double p[], double d[], double u[], double h[]);
 
 void InicialCondi  ( double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] );
 void RungeKutta    ( double dt, double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] );
@@ -51,6 +51,7 @@ double Compare_Max( double x, double y);
 
 int main (void)
 {
+  Current_time();
   clock_t start,end;
   start = clock();
   //質量、位置、速度、加速度、圧力、密度、内部エネルギー、内部エネルギーの時間変化、影響半径
@@ -73,10 +74,11 @@ int main (void)
       InicialCondi(mass, pos, vel, acc, press, dens, energy, difenergy, len);
     }else{
       //timestepの計算
-      timestep = Time_Step(pos, vel, press, dens, len);
+      timestep = Time_Step(pos, vel, press, dens, energy, len);
       totaltime = totaltime + timestep;
       if (totaltime > EndTime){
-        timestep = totaltime - EndTime;
+        totaltime = totaltime - timestep;
+        timestep = EndTime - totaltime;
         RungeKutta(timestep, mass, pos, vel, acc, press, dens, energy, difenergy, len);
         //解析解の出力
         fp = fopen("analytical_data.ptcl", "w");
@@ -133,7 +135,7 @@ double Press_Two_Shock_Approximation(void)
 {
   double a_L = sqrt(Gamma*Press1/Rho1);     //音速
   double a_R = sqrt(Gamma*Press2/Rho2);     //音速
-  double p_0 = Compare_Max( TOL, (Press1+Press2)/2-(Vel2-Vel1)*(Rho1+Rho2)*(a_L+a_R)/8);
+  double p_0 = Compare_Max( TOL, (Press1+Press2)/2.0-(Vel2-Vel1)*(Rho1+Rho2)*(a_L+a_R)/8);
   double A_L = 2 / (Gamma + 1) / Rho1;
   double B_L = (Gamma - 1) / (Gamma + 1)* Press1;
   double A_R = 2 / (Gamma + 1) / Rho2;
@@ -219,19 +221,19 @@ double Speed (char i, char j, double p_star, double u_star)//もし引数jにS�
 double Func_shock ( double p_star, double press_k, double rho_k)
 {
   double A_k = 2 / (Gamma +1) / rho_k;                //定数A
-  double B_k = press_k * (Gamma - 1) / (Gamma + 1);   //定数B
+  double B_k = press_k * (Gamma - 1.0) / (Gamma + 1);   //定数B
   return (p_star - press_k) * sqrt(A_k / (p_star + B_k));
 }
 
 double Func_rarefac ( double p_star, double press_k, double rho_k)
 {
   double a_k = sqrt(Gamma * press_k / rho_k);         //音速
-  return 2 * a_k / (Gamma - 1) * (pow (p_star / press_k , (Gamma-1)/2/Gamma) - 1);
+  return 2 * a_k / (Gamma - 1.0) * (pow (p_star / press_k , (Gamma-1)/2/Gamma) - 1);
 }
 double Dif_Func_shock ( double p_star, double press_k, double rho_k)
 {
   double A_k = 2 / (Gamma +1) / rho_k;                //定数A
-  double B_k = press_k * (Gamma - 1) / (Gamma + 1);   //定数B
+  double B_k = press_k * (Gamma - 1.0) / (Gamma + 1);   //定数B
   return sqrt(A_k / (p_star + B_k))*(1 - (p_star - press_k)/ 2 / (B_k + p_star));
 }
 
@@ -254,29 +256,29 @@ void Analytical_solution(double x[], double v[], double p[], double d[], double 
           p[i] = Press1;
           v[i] = Vel1;
           d[i] = Rho1;
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }else if(Speed('L','S',p_star,u_star)*EndTime<=(x[i] - Xmid) && (x[i] - Xmid) <= u_star*EndTime){
           p[i] = p_star;
           v[i] = u_star;
           d[i] = Star_Dens('L',Star_Press());
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }
       }else{                                //rarefaction
         if((x[i] - Xmid) < Speed('L','H',p_star,u_star)*EndTime){
           p[i] = Press1;
           v[i] = Vel1;
           d[i] = Rho1;
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }else if(Speed('L','H',p_star,u_star)*EndTime <= (x[i] - Xmid) && (x[i] - Xmid) <= Speed('L','T',p_star,u_star)*EndTime){
           p[i] = State_fan(i,3,'L',x);
           v[i] = State_fan(i,2,'L',x);
           d[i] = State_fan(i,1,'L',x);
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }else if (Speed('L','T',p_star,u_star)*EndTime <=(x[i] - Xmid) ){
           p[i] = p_star;
           v[i] = u_star;
           d[i] = Star_Dens('L',Star_Press());
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }
       }
     }else if(u_star*EndTime <=(x[i] - Xmid)){ //左側の固定粒子をを除く
@@ -286,30 +288,29 @@ void Analytical_solution(double x[], double v[], double p[], double d[], double 
           p[i] = Press2;
           v[i] = Vel2;
           d[i] = Rho2;
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }else if(Speed('R','S',p_star,u_star)*EndTime>=(x[i] - Xmid) && (x[i] - Xmid) >= u_star*EndTime){
           p[i] = p_star;
           v[i] = u_star;
           d[i] = Star_Dens('R',Star_Press());
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }
       }else{                                //rarefaction
         if(u_star*EndTime <= (x[i] - Xmid)&&(x[i] - Xmid)<= Speed('R','T',p_star,u_star)*EndTime){
           p[i] = p_star;
           v[i] = u_star;
           d[i] = Rho2 * pow(p[i]/Press2 , 1/Gamma);
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }else if(Speed('R','H',p_star,u_star)*EndTime >= (x[i] - Xmid) && (x[i] - Xmid) >= Speed('R','T',p_star,u_star)*EndTime){
           p[i] = State_fan(i,3,'R',x);
           v[i] = State_fan(i,2,'R',x);
           d[i] = State_fan(i,1,'R',x);
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }else if((x[i] - Xmid) >= Speed('R','H',p_star,u_star)*EndTime){
           p[i] = Press2;
           v[i] = Vel2;
           d[i] = Rho2;
-          u[i] = Press2 / (Gamma - 1) / Rho2;
-          u[i] = p[i] / (Gamma - 1) / d[i];
+          u[i] = p[i] / (Gamma - 1.0) / d[i];
         }
       }
     }
@@ -324,26 +325,26 @@ double State_fan(int i, int j, char str, double x[])    //j=1 密度、j=2 速�
     d = Rho1;
     p = Press1;
     a = sqrt(Gamma * p / d);
-    g = 2/(Gamma+1) +(Gamma-1)/(Gamma+1)/a*(u-(x[i]-Xmid)/EndTime);
+    g = 2.0/(Gamma+1.0) +(Gamma-1.0)/(Gamma+1.0)/a*(u-(x[i]-Xmid)/EndTime);
     if(j==1){
-      return d * pow(g,2 / (Gamma-1));
+      return d * pow(g,2.0 / (Gamma-1.0));
     }else if(j ==2){
-      return 2 / (Gamma + 1)* (a + (Gamma -1) / 2 *u + (x[i]-Xmid)/EndTime);
+      return 2.0 / (Gamma + 1.0)* (a + (Gamma -1.0) / 2.0 *u + (x[i]-Xmid)/EndTime);
     }else if (j==3){
-      return p * pow(g, 2 * Gamma / (Gamma-1));
+      return p * pow(g, 2.0 * Gamma / (Gamma-1.0));
     }
   }else if(str =='R' || str == 'r'){
     u = Vel2;
     d = Rho2;
     p = Press2;
     a = sqrt(Gamma * p / d);
-    g = 2 / (Gamma + 1) - (Gamma - 1) / (Gamma + 1) / a * (u- (x[i]-Xmid) / EndTime);
+    g = 2.0 / (Gamma + 1.0) - (Gamma - 1.0) / (Gamma + 1.0) / a * (u- (x[i]-Xmid) / EndTime);
     if(j==1){
-      return d * pow(g, 2 / (Gamma-1));
+      return d * pow(g, 2.0 / (Gamma-1.0));
     }else if(j ==2){
-      return 2 / (Gamma + 1) * (- 1 * a + (Gamma -1) / 2 *u + (x[i]-Xmid)/EndTime);
+      return 2.0 / (Gamma + 1.0) * (- 1.0 * a + (Gamma -1.0) / 2.0 *u + (x[i]-Xmid)/EndTime);
     }else if (j==3){
-      return p * pow(g, 2 * Gamma / (Gamma-1));
+      return p * pow(g, 2.0 * Gamma / (Gamma-1.0));
     }
   }
 }
@@ -353,7 +354,7 @@ double KernelFunc ( int i, int j, double x[], double h[] )
 {
   double dx = 0.0;
   dx = x[i] - x[j];
-  return exp(-1*dx*dx/h[i]/h[i]) /h[i]/sqrt(M_PI);
+  return exp(-1.0*dx*dx/h[i]/h[i]) /h[i]/sqrt(M_PI);
 }
 
 //カーネル関数の微分∇Wijの定義
@@ -361,14 +362,14 @@ double DifferKernelFunc ( int i, int j, double x[], double h[] )
 {
   double dx = 0.0;
   dx = x[i] - x[j];
-  return -2*dx*exp(-1*dx*dx/h[i]/h[i]) /h[i]/h[i]/h[i]/sqrt(M_PI);
+  return -2.0*dx*exp(-1.0*dx*dx/h[i]/h[i]) /h[i]/h[i]/h[i]/sqrt(M_PI);
 }
 //カーネル関数の微分∇Wijの定義
 double DifferKernelFunc_hj ( int i, int j, double x[], double h[] )
 {
   double dx = 0.0;
   dx = x[i] - x[j];
-  return -2*dx*exp(-1*dx*dx/h[j]/h[j]) /h[j]/h[j]/h[j]/sqrt(M_PI);
+  return -2.0*dx*exp(-1.0*dx*dx/h[j]/h[j]) /h[j]/h[j]/h[j]/sqrt(M_PI);
 }
 //人工粘性項の定義
 double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double u[], double h[])
@@ -378,29 +379,37 @@ double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double 
   dx = x[i] - x[j];
   dv = v[i] - v[j];
   //音速の計算
-  c = (sqrt((Gamma - 1) * u[i]) + sqrt((Gamma-1) * u[j])) / 2;
+  c = (sqrt((Gamma - 1.0) * u[i]) + sqrt((Gamma-1.0) * u[j])) / 2.0;
   mu = h[i]*dv*dx /(dx * dx + Epsilon * h[i] * h[i]);
   if ( dx * dv < 0){
-    return 2*(-1 * Alpha * c * mu + Beta * mu * mu) / (d[i] + d[j]);
+    return 2.0*(-1.0 * Alpha * c * mu + Beta * mu * mu) / (d[i] + d[j]);
   }else{
     return 0.0;
   }
 }
 //Smoothing Length の計算　i粒子に対する近傍粒子数に応じて長さを変える
-double Smoothing_Length ( int i, double m[], double d[])
+double Smoothing_Length ( int i, double m[], double x[], double d[])
 {
-  printf("%f\n",Neighbor_PTCL * m[i] / d[i] );
+  /*
+  int j = 0;
+  double dx[N_ALL];
+  for( j = 0; j < N_ALL; j++){
+    dx[j] = fabs(x[i] - x[j]);
+  }
+  qsort(dx, N_ALL, sizeof(double), asc);
+  return dx[Neighbor_PTCL];
+  */
   return Neighbor_PTCL * m[i] / d[i];
 }
 //最も小さいdtの計算
-double Time_Step ( double x[], double v[], double p[], double d[],double h[])
+double Time_Step ( double x[], double v[], double p[], double d[], double u[], double h[])
 {
   double t[N_PTCL], mu[N_PTCL];
   int i = 0, j = 0;
   double dx = 0.0, dv = 0.0, c = 0.0;
 
   for ( i = 0; i < N_PTCL; i++){
-    c = sqrt(Gamma * p[i] / d[i]);
+    c = sqrt((Gamma-1) * u[i]);
     for( j = 0; j < N_PTCL; j++){
       dx = x[i] - x[j];
       dv = v[i] - v[j];
@@ -408,7 +417,7 @@ double Time_Step ( double x[], double v[], double p[], double d[],double h[])
     }
     t[i] = h[i] / ( c + 0.6 * (Alpha * c + Beta * MaxArray(mu, (int) sizeof(mu) / sizeof(mu[0])) ));
   }
-  return  0.5 * MinArray(t, (int) sizeof(t) / sizeof(t[0]));
+  return  0.25 * MinArray(t, (int) sizeof(t) / sizeof(t[0]));
 }
 //初期条件(密度、位置、速さ、圧力、加速度)の定義：密度を1,0.25と仮定→hを固定
 void InicialCondi  ( double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] )
@@ -416,6 +425,7 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
   int i = 0, j = 0;
   double N1 = N_PTCL * Rho1 / (Rho1 + Rho2);
   double N2 = N_PTCL * Rho2 / (Rho1 + Rho2);
+  double difker_i = 0.0 , difker_j = 0.0, difker_ij = 0.0 ,vis = 0.0;
   for(i = 0; i < N_ALL; i++){
     m[i] = (Rho1 + Rho2) * DeltaX / N_PTCL;
     //密度を1と0.25にするために位置を調節
@@ -429,15 +439,13 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
       p[i] = Press1;
       d[i] = Rho1;
       v[i] = Vel1;
-      //h[i] = 2*m[i] / Rho1;
-    }else if ( N1 < i && i <= N_PTCL + N_Satb_PTCL / 2 ){
+    }else if ( N1 < i && i <= N_PTCL + N_Satb_PTCL / 2.0 ){
       x[i] = x[i-1] + DeltaX / N2;
       p[i] = Press2;
       d[i] = Rho2;
       v[i] = Vel2;
-      //h[i] = 2*m[i] / Rho2;
     }else{
-      if ( i == N_PTCL + N_Satb_PTCL / 2 + 1 ){
+      if ( i == N_PTCL + N_Satb_PTCL / 2.0 + 1.0 ){
         x[i] = x[0] - DeltaX / N1;
       }else{
         x[i] = x[i-1] - DeltaX / N1;
@@ -445,7 +453,6 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
       p[i] = Press1;
       d[i] = Rho1;
       v[i] = Vel1;
-      //h[i] = 2* m[i] / Rho1;
     }
     //初期化
     a[i] = 0.0;
@@ -453,29 +460,22 @@ void InicialCondi  ( double m[], double x[], double v[], double a[], double p[],
   }
   //smoothing length の計算
   for(i = 0; i < N_ALL; i++){
-    h[i] = Smoothing_Length(i, m, d);
+    h[i] = Smoothing_Length(i, m, x, d);
   }
-  //現在の粒子位置における密度を計算
-  for(i = 0; i < N_PTCL; i++){
-    d[i] = 0.0;
-    for(j = 0; j < N_ALL; j++){
-      d[i] = d[i] + m[j] * KernelFunc(i, j, x, h);
-    }
-  }
-
-
-
   //内部エネルギーの初期値
   for(i = 0; i < N_ALL; i++){
-    u[i] = p[i] / (Gamma -1) / d[i];
+    u[i] = p[i] / (Gamma -1.0) / d[i];
   }
 
   //加速度とエネルギーの時間微分の計算
   for(i = 0; i < N_ALL; i++){
     for(j = 0; j < N_ALL; j++){
-      a[i] = a[i] + (-1) * m[j] * (p[i] / d[i] / d[i] + p[j] / d[j] / d[j] ) * DifferKernelFunc(i, j, x, h);
+      difker_i =  DifferKernelFunc(i, j, x, h);
+      difker_j =  DifferKernelFunc_hj(i, j, x, h);
+      difker_ij = (difker_i+difker_j)/2.0;
+      a[i] = a[i] + (-1.0) * m[j] * (p[i] / d[i] / d[i] + p[j] / d[j] / d[j] ) * difker_ij;
       //エネルギー積分値は初速度0のとき初期値0
-      du[i]= du[i] + (p[i] / d[i] / d[j] )* m[j] * (v[i] - v[j] ) * DifferKernelFunc(i, j, x, h);
+      du[i]= du[i] + (p[i] / d[i] / d[i] )* m[j] * (v[i] - v[j] ) * difker_ij;
     }
   }
 }
@@ -497,12 +497,12 @@ double Grad_h_term (int i, double m[], double x[], double d, double h[])
 void RungeKutta ( double dt, double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] )
 {
   double vp[N_ALL], up[N_ALL], a1[N_ALL], du1[N_ALL];
-  int i = 0, j = 0, k = 0, l = 0, n = 0, o = 0, q = 0;
-  double difker_i = 0 , difker_j = 0, difker_ij = 0,vis = 0;
-  double fi = 0, fj =0;
+  int i = 0, j = 0;
+  double difker_i = 0.0 , difker_j = 0.0, difker_ij = 0.0 ,vis = 0.0;
+  double fi = 0.0, fj =0.0;
   for(i=0; i < N_ALL; i++){
     //ステップ後の位置を計算 系内の粒子のみ
-    x[i] = x[i] + v[i] * dt + a[i] * dt *dt / 2;    //ステップ後の位置はこの値となる
+    x[i] = x[i] + v[i] * dt + a[i] * dt *dt / 2.0;    //ステップ後の位置はこの値となる
   }
 
   for( i = 0; i < N_ALL; i++){
@@ -516,35 +516,36 @@ void RungeKutta ( double dt, double m[], double x[], double v[], double a[], dou
     for(j=0; j < N_ALL; j++){
       d[i] = d[i] + m[j] * KernelFunc(i, j, x, h); //ステップ後の密度はこの値となる
     }
-    p[i] = (Gamma - 1)* d[i] * up[i];
+    p[i] = (Gamma - 1.0)* d[i] * up[i];
+    h[i] = Smoothing_Length(i, m, x, d);
   }
   //ステップ後の加速度とエネルギーの時間微分を計算　系内の粒子のみ、全粒子に対して
   for(i = 0; i < N_PTCL; i++){
-    a1[i] = 0;
-    du1[i] = 0;
+    a1[i] = 0.0;
+    du1[i] = 0.0;
     fi = Grad_h_term(i, m, x, d[i], h);
     for(j = 0; j < N_ALL; j++){
       difker_i =  DifferKernelFunc(i, j, x, h);
       difker_j =  DifferKernelFunc_hj(i, j, x, h);
-      difker_ij = (difker_i+difker_j)/2;
+      difker_ij = (difker_i+difker_j)/2.0;
       vis = ViscosityTerm(i, j, x, vp, d, up ,h);
       fj = Grad_h_term(j, m, x, d[j], h);
-      a1[i] = a1[i] + (-1) * m[j] * (fi * p[i] / d[i] / d[i]  *difker_i + fj * p[j] / d[j] / d[j]  *difker_j)
-              -1 * m[j] * vis * difker_ij;
-      du1[i] = du1[i] + fi * (p[i] / d[i] / d[i] ) * m[j] * (vp[i] - vp[j] ) * difker_i
-              +1 * m[j] * vis * (vp[i] - vp[j] ) * difker_ij / 2 ;
+      a1[i] = a1[i] + (-1.0) * m[j] * (p[i] / d[i] / d[i]  +  p[j] / d[j] / d[j])*difker_ij
+              -1.0 * m[j] * vis * difker_ij;
+      du1[i] = du1[i] + (p[i] / d[i] / d[i] ) * m[j] * (vp[i] - vp[j] ) * difker_ij
+              +1.0 * m[j] * vis * (vp[i] - vp[j] ) * difker_ij / 2.0 ;
     }
   }
   //ステップ後の速度と内部エネルギーの計算 系内の粒子のみ
   for(i = 0; i < N_PTCL; i++){
-    v[i] = v[i] + (a[i] + a1[i]) * dt / 2;      //ステップ後の速度
-    u[i] = u[i] + (du[i]+ du1[i]) * dt /2;      //ステップ後のエネルギー
+    v[i] = v[i] + (a[i] + a1[i]) * dt / 2.0;      //ステップ後の速度
+    u[i] = u[i] + (du[i]+ du1[i]) * dt /2.0;      //ステップ後のエネルギー
   }
-  //加速度とエネルギーの時間微分の1ステップ後を本来の配列に代入 影響半径の計算
+  //加速度とエネルギーの時間微分の1ステップ後を本来の配列に代入
   for(i = 0; i < N_PTCL; i++){
     a[i] = a1[i];
     du[i] = du1[i];
-    h[i] = Smoothing_Length(i, m, d);
+    p[i] = (Gamma - 1.0)* d[i] * u[i];
   }
 }
 void PrintData    (FILE *file, double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] )
@@ -592,4 +593,13 @@ double Compare_Max( double x, double y)
   }else {
     return x;
   }
+}
+
+void Current_time()
+{
+  time_t now = time(NULL);
+  struct tm *pnow = localtime(&now);
+  char buff[128]="";
+  sprintf(buff,"%d:%d:%d",pnow->tm_hour,pnow->tm_min,pnow->tm_sec);
+  printf("%s\n",buff);
 }

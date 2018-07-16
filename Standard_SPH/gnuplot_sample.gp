@@ -7,5 +7,5 @@ set grid;
 set term png
 load "../make_figure.plt"
 
-!mv -f *.gif ../
+#!mv -f *.gif ../
 !mv -f *.png ../

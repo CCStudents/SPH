@@ -2,8 +2,8 @@ reset;
 set size square;
 set grid;
 set term png
-#set xr[0:1];
 set autoscale
+#set xr[-0.5:0.5];
 filename = "analytical_data.ptcl"
 
 # 1:位置 2:速度 3:速度の解 4:圧力 5:圧力の解 6:密度 7:密度の解 8:内部エネルギー 9:内部エネルギーの解

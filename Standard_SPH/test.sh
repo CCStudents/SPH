@@ -16,3 +16,5 @@ mv -f *.ptcl data/
 gnuplot << EOF
   load "gnuplot_sample.gp"
 EOF
+
+paplay /usr/share/sounds/freedesktop/stereo/complete.oga
