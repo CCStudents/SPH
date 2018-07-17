@@ -2,7 +2,7 @@
 #include<stdlib.h>
 #include<math.h>
 #include<time.h>
-#include"Test5.h"
+#include"Test2.h"
 
 #define N_PTCL        500        //系内の全粒粒子数
 #define N_Satb_PTCL   200         //考えている系の前後にそれぞれ配置する粒子数

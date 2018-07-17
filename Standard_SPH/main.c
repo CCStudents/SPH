@@ -2,7 +2,7 @@
 #include<stdlib.h>
 #include<math.h>
 #include<time.h>
-#include"Test4.h"
+#include"Test5.h"
 
 #define N_PTCL        500        //系内の全粒粒子数
 #define N_Satb_PTCL   100         //考えている系の前後にそれぞれ配置する粒子数
@@ -375,14 +375,18 @@ double DifferKernelFunc_hj ( int i, int j, double x[], double h[] )
 double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double u[], double h[])
 {
   double   e = 0.01;
-  double dx = 0.0, dv = 0.0, c = 0.0, mu = 0.0;
+  double dx = 0.0, dv = 0.0, c = 0.0, mu = 0.0, w = 0.0, v_sig = 0.0;
   dx = x[i] - x[j];
   dv = v[i] - v[j];
   //音速の計算
-  c = (sqrt((Gamma - 1) * u[i]) + sqrt((Gamma-1) * u[j])) / 2;
-  mu = h[i]*dv*dx /(dx * dx + Epsilon * h[i] * h[i]);
+  w = dx * dv / fabs(dx);
+  v_sig =  sqrt((Gamma - 1.0) * u[i]) + sqrt((Gamma-1.0) * u[j]) - 3* w;
+  //c = (sqrt((Gamma - 1.0) * u[i]) + sqrt((Gamma-1.0) * u[j])) / 2.0;
+  //mu = h[i]*dv*dx /(dx * dx + Epsilon * h[i] * h[i]);
+
   if ( dx * dv < 0){
-    return 2*(-1 * Alpha * c * mu + Beta * mu * mu) / (d[i] + d[j]);
+    //return 2.0*(-1.0 * Alpha * c * mu + Beta * mu * mu) / (d[i] + d[j]);
+    return - 1.0 * Alpha * v_sig * w /(d[i]+d[j]);
   }else{
     return 0.0;
   }
@@ -547,7 +551,6 @@ void RungeKutta ( double dt, double m[], double x[], double v[], double a[], dou
     du[i] = du1[i];
     p[i] = (Gamma - 1.0)* d[i] * u[i];
   }
-  printf("%f\n",p[200] );
 }
 void PrintData    (FILE *file, double m[], double x[], double v[], double a[], double p[], double d[], double u[], double du[], double h[] )
 {
