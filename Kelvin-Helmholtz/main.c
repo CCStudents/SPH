@@ -84,6 +84,7 @@ int main (void)
       //timestepの計算
       timestep = Time_Step(pos, vel, press, dens, energy, len);
       totaltime = totaltime + timestep;
+      printf("%f\n",totaltime );
       if (totaltime > EndTime){
         totaltime = totaltime - timestep;
         timestep = EndTime - totaltime;
@@ -129,6 +130,7 @@ void Mesh_Condi (double mesh_r[Mesh+1][Mesh+1][DIM])
 void Periodic_Boundary_Conditions(int i, double r[][DIM])
 {
   int k;
+
   if (r[i][1] > 0.75){  //i粒子が0.75よりも大きい位置にいる場合、0<ｘ<0.25位置にある粒子をx=1よりも大きい領域になければならない
     if (r[i][2] > 0.75){  //上右端
       for (k=0;k<N_ALL;k++){
@@ -211,14 +213,12 @@ void Periodic_Boundary_Conditions(int i, double r[][DIM])
       for(k = 0; k < N_ALL; k++){
         if ( r[k][2] > 0.75 ){
           r[k][2] = r[k][2] - YMax - dl_N1  ;
-          printf("*\n" );
         }
       }
     }else if (r[i][2] > 0.75){
       for(k = 0; k < N_ALL; k++){
         if (r[k][2] < 0.25){
           r[k][2] = r[k][2] + YMax + dl_N1;
-          printf("**\n" );
         }
       }
     }
@@ -266,8 +266,8 @@ void Mesh_Periodic_Boundary_Conditions(double mesh_x, double mesh_y, double r[][
         }
       }
     }
-
-  }else if (mesh_x < 0.25){
+  }
+  else if (mesh_x < 0.25){
     if (mesh_y > 0.75){
       for(k = 0; k < N_ALL; k++){
         if (r[k][2] < 0.25 && r[k][1] > 0.75){
@@ -305,7 +305,8 @@ void Mesh_Periodic_Boundary_Conditions(double mesh_x, double mesh_y, double r[][
         }
       }
     }
-  }else {
+  }
+  else {
     if(mesh_y < 0.25){
       for(k = 0; k < N_ALL; k++){
         if ( r[k][2] > 0.75 ){
@@ -325,7 +326,7 @@ void Mesh_Periodic_Boundary_Conditions(double mesh_x, double mesh_y, double r[][
 void Mesh_Density (double m[], double r[][DIM], double mesh_d[Mesh+1][Mesh+1], double mesh_r[Mesh+1][Mesh+1][DIM])
 {
   int i, j, k;
-  double h = 0.03; //smoothing lengthの目安　→hが収束するまで、密度計算、h計算を繰り返す
+  double h = sqrt(Neighbor_PTCL * m[1] / Rho2); //smoothing lengthの目安　→hが収束するまで、密度計算、h計算を繰り返す
 
   for (i = 0; i < Mesh+1; i++){
     for(j = 0; j < Mesh+1; j++){
@@ -343,18 +344,23 @@ void Return_Periodic_Boundary_Conditions(double r[][DIM])
 {
   int k;
   for(k = 0; k < N_ALL; k++){
-    if (r[k][1] > 1.0 && (r[k][2] < 0.25 || r[k][2] > 0.75)){
+    if (r[k][2] < 0.0){
+      r[k][2] = r[k][2] + YMax +dl_N1;
+    }else if (r[k][2] > 1.0){
+      r[k][2] = r[k][2] - YMax - dl_N1;
+    }
+    if (r[k][1] > 1.0 && r[k][2] < 0.25){
+      r[k][1] = r[k][1] - XMax - dl_N1;
+    }else if (r[k][1] > 1.0 && r[k][2] > 0.75){
       r[k][1] = r[k][1] - XMax - dl_N1;
     }else if (r[k][1] > 1.0 && r[k][2] > 0.25 && r[k][2] < 0.75){
       r[k][1] = r[k][1] - XMax - dl_N2;
-    }else if(r[k][1] < 0.0 && (r[k][2] < 0.25 || r[k][2] > 0.75)){
+    }else if(r[k][1] < 0.0 && r[k][2] < 0.25){
+      r[k][1] = r[k][1] + XMax + dl_N1;
+    }else if(r[k][1] < 0.0 && r[k][2] > 0.75){
       r[k][1] = r[k][1] + XMax + dl_N1;
     }else if (r[k][1] < 0.0 && r[k][2] > 0.25 && r[k][2] < 0.75){
       r[k][1] = r[k][1] + XMax + dl_N2;
-    }else if (r[k][2] > 1.0){
-      r[k][2] = r[k][2] - YMax - dl_N1;
-    }else if (r[k][2] < 0.0){
-      r[k][2] = r[k][2] + YMax + dl_N1;
     }
   }
 }
@@ -559,15 +565,15 @@ void RungeKutta ( double dt, double m[], double r[][DIM], double v[][DIM], doubl
     //ステップ後の位置を計算 系内の粒子のみ
     r[i][1] = r[i][1] + v[i][1] * dt + a[i][1] * dt *dt / 2.0;    //ステップ後の位置はこの値となる
     if (r[i][1] > XMax){
-      r[i][1] = r[i][1] - XMax;
+      r[i][1] = r[i][1] - XMax ;
     }else if (r[i][1] < XMin){
       r[i][1] = r[i][1] + XMax;
     }
     r[i][2] = r[i][2] + v[i][2] * dt + a[i][2] * dt *dt / 2.0;    //ステップ後の位置はこの値となる
     if (r[i][2] > YMax){
-      r[i][2] = r[i][2] - YMax;
+      r[i][2] = r[i][2] - YMax - dl_N1;
     }else if (r[i][2] < YMin){
-      r[i][2] = r[i][2] + YMax;
+      r[i][2] = r[i][2] + YMax + dl_N1;
     }
   }
 
@@ -593,32 +599,7 @@ void RungeKutta ( double dt, double m[], double r[][DIM], double v[][DIM], doubl
   }
   //ステップ後の加速度とエネルギーの時間微分を計算　系内の粒子のみ、全粒子に対して
   for(i = 0; i < N_ALL; i++){
-    if (r[i][1] > 0.75){  //i粒子が0.75よりも大きい位置にいる場合、ｘの負の位置にある粒子をx=1よりも大きい領域になければならない
-      for( k = 0; k < N_ALL; k++){
-        if (r[k][1] < 0.25){
-          r[k][1] = r[k][1] + XMax;
-        }
-      }
-    }else if (r[i][1] < 0.25){
-      for(k = 0; k < N_ALL; k++){
-        if ( r[k][1] > 0.75){
-          r[k][1] = r[k][1] - XMax;
-        }
-      }
-    }else if (r[i][2] > 0.75){
-      for(k = 0; k < N_ALL; k++){
-        if (r[k][2] < 0.25){
-          r[k][2] = r[k][2] + YMax;
-        }
-      }
-    }else if (r[i][2] < 0.25){
-      for(k = 0; k < N_ALL; k++){
-        if ( r[k][2] > 0.75){
-          r[k][2] = r[k][2] - YMax;
-        }
-      }
-    }
-
+    Periodic_Boundary_Conditions(i,r);
     a1[i][1] = 0.0;
     a1[i][2] = 0.0;
     du1[i] = 0.0;
@@ -640,17 +621,7 @@ void RungeKutta ( double dt, double m[], double r[][DIM], double v[][DIM], doubl
               +1.0 * m[j] * vis *  ((vp[i][1] - vp[j][1] ) * difker_ij_x + (vp[i][2] - vp[j][2])*difker_ij_y)/ 2.0 ;
     }
     //周期的境界条件のために移動させた位置をもとに戻す
-    for(k = 0; k < N_ALL; k++){
-      if (r[k][1] > 1){
-        r[k][1] = r[k][1] - XMax;
-      }else if(r[k][1] < 0){
-        r[k][1] = r[k][1] + XMax;
-      }else if (r[k][2] > 1){
-        r[k][2] = r[k][2] - YMax;
-      }else if (r[k][2] < 0){
-        r[k][2] = r[k][2] + YMax;
-      }
-    }
+    Return_Periodic_Boundary_Conditions(r);
   }
   //ステップ後の速度と内部エネルギーの計算 系内の粒子のみ
   for(i = 0; i < N_PTCL; i++){
@@ -672,9 +643,10 @@ void PrintData    (FILE *file, double m[], double r[][DIM], double v[][DIM], dou
   int i = 0;
   for(i = 0; i < N_PTCL; i++){
     if (i < N_PTCL - 1){
+      if (r[i][1] == 0.0){
+        fprintf(file, "\n");
+      }
       fprintf(file, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf \n", m[i], r[i][1], r[i][2], v[i][1], v[i][2], a[i][1],a[i][2], p[i], d[i], u[i], du[i], h[i]);
-    }else{
-      fprintf(file, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf \n\n", m[i], r[i][1], r[i][2], v[i][1], v[i][2], a[i][1],a[i][2], p[i], d[i], u[i], du[i], h[i]);
     }
   }
 }

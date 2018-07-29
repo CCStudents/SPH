@@ -1,13 +1,13 @@
-#define Rho1    2              //初期密度1
-#define Vel1    0.5              //初期速度1
+#define Rho1    1              //初期密度1
+#define Vel1    -0.5              //初期速度1
 #define Press1  2.5              //初期圧力1
-#define Rho2    1            //初期密度2
-#define Vel2    -0.5            //初期速度2
+#define Rho2    2            //初期密度2
+#define Vel2    0.5            //初期速度2
 #define Press2  2.5              //初期圧力2
 #define EndTime 1.10           //終了時刻
 #define XMax    1.0              //系の大きさ(xの最大値)
 #define XMin    0.0             //系の大きさ(xの最小値)
-#define YMax    1.022              //系の大きさ(yの最大値)
+#define YMax    1.0              //系の大きさ(yの最大値)
 #define YMin    0.0             //系の大きさ(yの最小値)
 #define DeltaX  (XMax - XMin) / 2  //系の大きさの半分
 #define Xmid    (XMax + XMin) / 2   //系の中心座標
