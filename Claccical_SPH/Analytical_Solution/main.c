@@ -2,7 +2,7 @@
 #include<stdlib.h>
 #include<math.h>
 #include<time.h>
-#include"Test2.h"
+#include"Test1.h"
 
 #define N_PTCL        500        //系内の全粒粒子数
 #define N_Satb_PTCL   200         //考えている系の前後にそれぞれ配置する粒子数
@@ -16,6 +16,8 @@ void Current_time();
 double KernelFunc  ( int i,int j, double x[], double h[] );
 double DifferKernelFunc  ( int i,int j, double x[], double h[] );
 double DifferKernelFunc_hj ( int i, int j, double x[], double h[] );
+double DifferKernelFunc_hihj ( int i, int j, double x[], double h[] );
+
 double Grad_h_term (int i, double m[], double x[], double d, double h[]);
 
 
@@ -371,6 +373,14 @@ double DifferKernelFunc_hj ( int i, int j, double x[], double h[] )
   dx = x[i] - x[j];
   return -2.0*dx*exp(-1.0*dx*dx/h[j]/h[j]) /h[j]/h[j]/h[j]/sqrt(M_PI);
 }
+double DifferKernelFunc_hihj ( int i, int j, double x[], double h[] )
+{
+  double dx = 0.0, hihj;
+  dx = x[i] - x[j];
+  hihj = (h[i] + h[j])/2;
+  return -2.0*dx*exp(-1.0*dx*dx/hihj/hihj) /hihj/hihj/hihj/sqrt(M_PI);
+}
+
 //人工粘性項の定義
 double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double u[], double h[])
 {
@@ -394,7 +404,7 @@ double ViscosityTerm ( int i, int j, double x[], double v[], double d[], double 
 //Smoothing Length の計算　i粒子に対する近傍粒子数に応じて長さを変える
 double Smoothing_Length ( int i, double m[], double x[], double d[])
 {
-  /*
+
   int j = 0;
   double dx[N_ALL];
   for( j = 0; j < N_ALL; j++){
@@ -402,8 +412,8 @@ double Smoothing_Length ( int i, double m[], double x[], double d[])
   }
   qsort(dx, N_ALL, sizeof(double), asc);
   return dx[Neighbor_PTCL];
-  */
-  return Neighbor_PTCL * m[i] / d[i];
+
+  //return Neighbor_PTCL * m[i] / d[i];
 }
 //最も小さいdtの計算
 double Time_Step ( double x[], double v[], double p[], double d[], double u[], double h[])
@@ -502,7 +512,7 @@ void RungeKutta ( double dt, double m[], double x[], double v[], double a[], dou
 {
   double vp[N_ALL], up[N_ALL], a1[N_ALL], du1[N_ALL];
   int i = 0, j = 0;
-  double difker_i = 0.0 , difker_j = 0.0, difker_ij = 0.0 ,vis = 0.0;
+  double difker_i = 0.0 , difker_j = 0.0, difker_ij = 0.0 ,difker_hihj= 0.0,vis = 0.0;
   double fi = 0.0, fj =0.0;
   for(i=0; i < N_ALL; i++){
     //ステップ後の位置を計算 系内の粒子のみ
@@ -532,12 +542,13 @@ void RungeKutta ( double dt, double m[], double x[], double v[], double a[], dou
       difker_i =  DifferKernelFunc(i, j, x, h);
       difker_j =  DifferKernelFunc_hj(i, j, x, h);
       difker_ij = (difker_i+difker_j)/2.0;
+      difker_hihj = DifferKernelFunc_hihj(i, j, x, h);
       vis = ViscosityTerm(i, j, x, vp, d, up ,h);
       fj = Grad_h_term(j, m, x, d[j], h);
-      a1[i] = a1[i] + (-1.0) * m[j] * (p[i] / d[i] / d[i]  +  p[j] / d[j] / d[j])*difker_ij
-              -1.0 * m[j] * vis * difker_ij;
-      du1[i] = du1[i] + (p[i] / d[i] / d[i] ) * m[j] * (vp[i] - vp[j] ) * difker_ij
-              +1.0 * m[j] * vis * (vp[i] - vp[j] ) * difker_ij / 2.0 ;
+      a1[i] = a1[i] + (-1.0) * m[j] * (p[i] / d[i] / d[i]  +  p[j] / d[j] / d[j])*difker_hihj
+              -1.0 * m[j] * vis * difker_hihj;
+      du1[i] = du1[i] + (p[i] / d[i] / d[i] ) * m[j] * (vp[i] - vp[j] ) * difker_hihj
+              +1.0 * m[j] * vis * (vp[i] - vp[j] ) * difker_hihj / 2.0 ;
     }
   }
   //ステップ後の速度と内部エネルギーの計算 系内の粒子のみ
